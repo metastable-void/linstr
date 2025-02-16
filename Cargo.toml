@@ -1,0 +1,10 @@
+[package]
+name = "linstr"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+libm = "0.2"
+
+[dev-dependencies]
+cpal = "0.15"
