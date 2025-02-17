@@ -65,7 +65,8 @@ impl<'a, const SIZE: usize, const CONTROL_SIZE: usize, const CONNECTION_SIZE: us
         instance
     }
 
-    pub fn add_instrument(&mut self, instrument: &'a mut dyn InstrumentContainer<Note>) -> usize {
+    pub fn add_instrument<I: InstrumentContainer<Note> + 'a>(&mut self, instrument: I) -> usize {
+        let instrument = crate::leak(instrument);
         for i in 0..SIZE {
             if self.instruments[i].is_none() {
                 self.instruments[i] = Some(instrument);
@@ -75,7 +76,8 @@ impl<'a, const SIZE: usize, const CONTROL_SIZE: usize, const CONNECTION_SIZE: us
         panic!("No more space for instruments");
     }
 
-    pub fn add_control_source(&mut self, control_source: &'a mut dyn ControlStreamSource<Note>) -> usize {
+    pub fn add_control_source<S: ControlStreamSource<Note> + 'a>(&mut self, control_source: S) -> usize {
+        let control_source = crate::leak(control_source);
         for i in 0..CONTROL_SIZE {
             if self.control_sources[i].is_none() {
                 self.control_sources[i] = Some(control_source);

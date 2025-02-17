@@ -63,29 +63,34 @@ fn main() {
 
     let signal_ref = &SIGNAL;
 
-    let control = Box::new(MyControl::new(signal_ref));
 
-    let osc = Box::new(container(instrument::oscillators::SineOscillator::<MidiNote>::new(sampling_rate)));
-    let env = Box::new(container(instrument::envelope::LinearEnvelope::<1, MidiNote>::new([0], [1.0], sampling_rate / 2)));
-    let gain = Box::new(container(instrument::Amplifier::<MidiNote>::new()));
-    let freq = Box::new(container(instrument::Constant::<MidiNote>::new(440.0)));
-    let zero = Box::new(container(instrument::Constant::<MidiNote>::new(0.0)));
+    let f = 880.0;
+    let f2 = f * 1.3;
 
-    let mut graph = graph::InstrumentGraph::<5>::new();
-    graph.add_instrument(Box::leak(osc));
-    graph.add_instrument(Box::leak(env));
-    graph.add_instrument(Box::leak(gain));
-    graph.add_instrument(Box::leak(freq));
-    graph.add_instrument(Box::leak(zero));
+    let mut graph = graph::InstrumentGraph::<8>::new();
 
-    graph.add_control_source(Box::leak(control));
+    graph.add_instrument(container(instrument::oscillators::SineOscillator::<MidiNote>::new(sampling_rate)));
+    graph.add_instrument(container(instrument::envelope::LinearEnvelope::<1, MidiNote>::new([0], [1.0], sampling_rate / 2)));
+    graph.add_instrument(container(instrument::Amplifier::<MidiNote>::new()));
+    graph.add_instrument(container(instrument::Constant::<MidiNote>::new(f)));
+    graph.add_instrument(container(instrument::Constant::<MidiNote>::new(0.0)));
+    graph.add_instrument(container(instrument::Constant::<MidiNote>::new(f2)));
+    graph.add_instrument(container(instrument::oscillators::SineOscillator::<MidiNote>::new(sampling_rate)));
+    graph.add_instrument(container(instrument::Amplifier::<MidiNote>::new()));
+
+    graph.add_control_source(MyControl::new(signal_ref));
 
     graph.connect_control_source(0, 1);
     graph.connect_destination(0, 2, 0);
     graph.connect_value_stream(0, 0, 2, 0);
     graph.connect_value_stream(1, 0, 2, 1);
     graph.connect_value_stream(3, 0, 0, 0);
-    graph.connect_value_stream(4, 0, 0, 1);
+    // graph.connect_value_stream(4, 0, 0, 1);
+    graph.connect_value_stream(5, 0, 6, 0);
+    graph.connect_value_stream(4, 0, 6, 1);
+    graph.connect_value_stream(7, 0, 0, 1);
+    graph.connect_value_stream(6, 0, 7, 0);
+    graph.connect_value_stream(1, 0, 7, 1);
 
     println!("Order: {:?}", graph.get_instrument_process_order());
 
@@ -99,13 +104,17 @@ fn main() {
                 if j < remains.len() {
                     data[i] = remains[j];
                 } else {
-                    graph.process_next();
-                    remains.clear();
-                    remains.extend_from_slice(graph.get_output(0));
+                    if i % config.channels as usize == 0 {
+                        graph.process_next();
+                        remains.clear();
+                        remains.extend_from_slice(graph.get_output(0));
+                    }
                     j = 0;
                     data[i] = remains[j];
                 }
-                j += 1;
+                if i % config.channels as usize == config.channels as usize - 1 {
+                    j += 1;
+                }
             }
 
             remains.drain(0..j);

@@ -239,3 +239,10 @@ pub trait ControlStreamSource<Note: Sized> {
     fn get_control_stream(&self) -> &[NoteCommand<Note>];
     fn fetch_next_stream(&mut self);
 }
+
+pub fn leak<'a, T>(mut value: T) -> &'a mut T {
+    unsafe {
+        let value = &mut value as *mut T;
+        &mut *value
+    }
+}
