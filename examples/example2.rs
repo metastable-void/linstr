@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use linstr::*;
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use rand::Rng;
 
 struct MyControl<'a> {
     signal: &'a AtomicBool,
@@ -63,8 +64,11 @@ fn main() {
 
     let signal_ref = &SIGNAL;
 
+    let mut rng = rand::rng();
 
-    let f = 880.0;
+    let f: u16 = rng.random_range(440..1760);
+
+    let f = f as f32;
     let f2 = f * 1.3;
 
     let mut graph = graph::InstrumentGraph::<9>::new();
