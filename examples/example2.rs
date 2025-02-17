@@ -67,7 +67,7 @@ fn main() {
     let f = 880.0;
     let f2 = f * 1.3;
 
-    let mut graph = graph::InstrumentGraph::<8>::new();
+    let mut graph = graph::InstrumentGraph::<9>::new();
 
     graph.add_instrument(container(instrument::oscillators::SineOscillator::<MidiNote>::new(sampling_rate)));
     graph.add_instrument(container(instrument::envelope::LinearEnvelope::<1, MidiNote>::new([0], [1.0], sampling_rate / 2)));
@@ -77,10 +77,12 @@ fn main() {
     graph.add_instrument(container(instrument::Constant::<MidiNote>::new(f2)));
     graph.add_instrument(container(instrument::oscillators::SineOscillator::<MidiNote>::new(sampling_rate)));
     graph.add_instrument(container(instrument::Amplifier::<MidiNote>::new()));
+    graph.add_instrument(container(instrument::envelope::LinearEnvelope::<1, MidiNote>::new([0], [0.125], sampling_rate / 2)));
 
     graph.add_control_source(MyControl::new(signal_ref));
 
     graph.connect_control_source(0, 1);
+    graph.connect_control_source(0, 8);
     graph.connect_destination(0, 2, 0);
     graph.connect_value_stream(0, 0, 2, 0);
     graph.connect_value_stream(1, 0, 2, 1);
@@ -90,7 +92,7 @@ fn main() {
     graph.connect_value_stream(4, 0, 6, 1);
     graph.connect_value_stream(7, 0, 0, 1);
     graph.connect_value_stream(6, 0, 7, 0);
-    graph.connect_value_stream(1, 0, 7, 1);
+    graph.connect_value_stream(8, 0, 7, 1);
 
     println!("Order: {:?}", graph.get_instrument_process_order());
 
