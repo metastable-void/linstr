@@ -73,17 +73,17 @@ fn main() {
 
     let mut graph = graph::InstrumentGraph::<16>::new();
 
-    graph.add_instrument(container(instrument::oscillators::SineOscillator::<MidiNote>::new(sampling_rate)));
-    graph.add_instrument(container(instrument::envelope::LinearEnvelope::<1, MidiNote>::new([0], [1.0], sampling_rate / 2)));
-    graph.add_instrument(container(instrument::Amplifier::<MidiNote>::new()));
-    graph.add_instrument(container(instrument::Constant::<MidiNote>::new(f)));
-    graph.add_instrument(container(instrument::Constant::<MidiNote>::new(0.0)));
-    graph.add_instrument(container(instrument::Constant::<MidiNote>::new(f2)));
-    graph.add_instrument(container(instrument::oscillators::SineOscillator::<MidiNote>::new(sampling_rate)));
-    graph.add_instrument(container(instrument::Amplifier::<MidiNote>::new()));
-    graph.add_instrument(container(instrument::envelope::LinearEnvelope::<1, MidiNote>::new([0], [0.125], sampling_rate / 2)));
+    graph.add_instrument(leak(container(instrument::oscillators::SineOscillator::<MidiNote>::new(sampling_rate))));
+    graph.add_instrument(leak(container(instrument::envelope::LinearEnvelope::<1, MidiNote>::new([0], [1.0], sampling_rate / 2))));
+    graph.add_instrument(leak(container(instrument::Amplifier::<MidiNote>::new())));
+    graph.add_instrument(leak(container(instrument::Constant::<MidiNote>::new(f))));
+    graph.add_instrument(leak(container(instrument::Constant::<MidiNote>::new(0.0))));
+    graph.add_instrument(leak(container(instrument::Constant::<MidiNote>::new(f2))));
+    graph.add_instrument(leak(container(instrument::oscillators::SineOscillator::<MidiNote>::new(sampling_rate))));
+    graph.add_instrument(leak(container(instrument::Amplifier::<MidiNote>::new())));
+    graph.add_instrument(leak(container(instrument::envelope::LinearEnvelope::<1, MidiNote>::new([0], [0.125], sampling_rate / 2))));
 
-    graph.add_control_source(MyControl::new(signal_ref));
+    graph.add_control_source(leak(MyControl::new(signal_ref)));
 
     graph.connect_control_source(0, 1);
     graph.connect_control_source(0, 8);
@@ -104,7 +104,6 @@ fn main() {
     let stream = device.build_output_stream(
         &config,
         move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-
             let mut j = 0;
             for i in 0..data.len() {
                 if j < remains.len() {
@@ -140,4 +139,8 @@ fn main() {
         SIGNAL.store(true, Ordering::SeqCst);
         line.clear();
     }
+}
+
+fn leak<'a, T: 'a>(value: T) -> &'a mut T {
+    Box::leak(Box::new(value))
 }

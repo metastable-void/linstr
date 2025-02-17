@@ -110,11 +110,6 @@ impl<const POINTS: usize, Note: Sized> Instrument<0, 1, 1, Note> for LinearEnvel
         }
 
         for i in 0..VALUE_BLOCK {
-            if POINTS == 0 {
-                output.value_streams[0][i] = 0.0;
-                continue;
-            }
-
             if self.current_point == 0 {
                 output.value_streams[0][i] = 0.0;
             } else if self.current_point <= POINTS {
@@ -148,6 +143,9 @@ impl<const POINTS: usize, Note: Sized> Instrument<0, 1, 1, Note> for LinearEnvel
                     }
                 }
             } else {
+                if POINTS == 0 {
+                    self.current_gain = 1.0;
+                }
                 let release_time_f32 = self.release_time as f32;
                 let current_time_f32 = self.current_time as f32;
                 let gain = if self.release_time == 0 { 0.0 } else { self.current_gain * (1.0 - current_time_f32 / release_time_f32) };

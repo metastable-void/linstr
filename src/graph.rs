@@ -18,7 +18,7 @@ pub(crate) struct DestinationConnection {
     pub(crate) source_stream_index: usize,
 }
 
-pub struct InstrumentGraph<'a, const SIZE: usize, const CONTROL_SIZE: usize = 16usize, const CONNECTION_SIZE: usize = 16usize, const OUTPUT_CHANNELS: usize = 1usize, Note: Sized + Default + Copy = MidiNote> {
+pub struct InstrumentGraph<'a, const SIZE: usize, const CONTROL_SIZE: usize = 16usize, const CONNECTION_SIZE: usize = 16usize, const OUTPUT_CHANNELS: usize = 1usize, Note: Sized + Default + Copy + Send = MidiNote> {
     /// The instruments in the graph
     pub instruments: [Option<&'a mut dyn InstrumentContainer<Note>>; SIZE],
 
@@ -36,9 +36,9 @@ pub struct InstrumentGraph<'a, const SIZE: usize, const CONTROL_SIZE: usize = 16
     pub(crate) output_channels: [[MusicalValue; STANDARD_BLOCK_SIZE]; OUTPUT_CHANNELS],
 }
 
-unsafe impl<'a, const SIZE: usize, const CONTROL_SIZE: usize, const CONNECTION_SIZE: usize, const OUTPUT_CHANNELS: usize, Note: Sized + Default + Copy> Send for InstrumentGraph<'a, SIZE, CONTROL_SIZE, CONNECTION_SIZE, OUTPUT_CHANNELS, Note> {}
+//unsafe impl<'a, const SIZE: usize, const CONTROL_SIZE: usize, const CONNECTION_SIZE: usize, const OUTPUT_CHANNELS: usize, Note: Sized + Default + Copy> Send for InstrumentGraph<'a, SIZE, CONTROL_SIZE, CONNECTION_SIZE, OUTPUT_CHANNELS, Note> {}
 
-impl<'a, const SIZE: usize, const CONTROL_SIZE: usize, const CONNECTION_SIZE: usize, const OUTPUT_CHANNELS: usize, Note: Sized + Default + Copy> InstrumentGraph<'a, SIZE, CONTROL_SIZE, CONNECTION_SIZE, OUTPUT_CHANNELS, Note> {
+impl<'a, const SIZE: usize, const CONTROL_SIZE: usize, const CONNECTION_SIZE: usize, const OUTPUT_CHANNELS: usize, Note: Sized + Default + Copy + Send> InstrumentGraph<'a, SIZE, CONTROL_SIZE, CONNECTION_SIZE, OUTPUT_CHANNELS, Note> {
     pub fn new() -> Self {
         let mut instance: Self = unsafe {
             core::mem::zeroed()
@@ -65,8 +65,7 @@ impl<'a, const SIZE: usize, const CONTROL_SIZE: usize, const CONNECTION_SIZE: us
         instance
     }
 
-    pub fn add_instrument<I: InstrumentContainer<Note> + 'a>(&mut self, instrument: I) -> usize {
-        let instrument = crate::leak(instrument);
+    pub fn add_instrument(&mut self, instrument: &'a mut dyn InstrumentContainer<Note>) -> usize {
         for i in 0..SIZE {
             if self.instruments[i].is_none() {
                 self.instruments[i] = Some(instrument);
@@ -76,8 +75,7 @@ impl<'a, const SIZE: usize, const CONTROL_SIZE: usize, const CONNECTION_SIZE: us
         panic!("No more space for instruments");
     }
 
-    pub fn add_control_source<S: ControlStreamSource<Note> + 'a>(&mut self, control_source: S) -> usize {
-        let control_source = crate::leak(control_source);
+    pub fn add_control_source(&mut self, control_source: &'a mut dyn ControlStreamSource<Note>) -> usize {
         for i in 0..CONTROL_SIZE {
             if self.control_sources[i].is_none() {
                 self.control_sources[i] = Some(control_source);

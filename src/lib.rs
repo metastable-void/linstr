@@ -5,7 +5,7 @@ pub mod graph;
 
 /// The type of command to be sent to an instrument
 #[repr(u8)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum NoteCommandType {
     Noop = 0,
     NoteOn = 1,
@@ -155,7 +155,7 @@ impl<
 }
 
 /// A container for an instrument, its input, and its output
-pub trait InstrumentContainer<Note: Sized + Default + Copy = MidiNote> {
+pub trait InstrumentContainer<Note: Sized + Default + Copy = MidiNote>: Send {
     fn in_value_streams(&self) -> usize;
 
     fn in_control_streams(&self) -> usize;
@@ -182,11 +182,11 @@ pub trait InstrumentContainer<Note: Sized + Default + Copy = MidiNote> {
 }
 
 impl<
-    I: Instrument<IN_VALUE_STREAMS, IN_CONTROL_STREAMS, OUT_VALUE_STREAMS, Note>,
+    I: Instrument<IN_VALUE_STREAMS, IN_CONTROL_STREAMS, OUT_VALUE_STREAMS, Note> + Send,
     const IN_VALUE_STREAMS: usize,
     const IN_CONTROL_STREAMS: usize,
     const OUT_VALUE_STREAMS: usize,
-    Note: Sized + Default + Copy,
+    Note: Sized + Default + Copy + Send,
 > InstrumentContainer<Note> for InstrumentContainerImpl<I, IN_VALUE_STREAMS, IN_CONTROL_STREAMS, OUT_VALUE_STREAMS, Note> {
     fn in_value_streams(&self) -> usize {
         IN_VALUE_STREAMS
@@ -224,25 +224,18 @@ impl<
 }
 
 pub fn container<
-    I: Instrument<IN_VALUE_STREAMS, IN_CONTROL_STREAMS, OUT_VALUE_STREAMS, Note>,
+    I: Instrument<IN_VALUE_STREAMS, IN_CONTROL_STREAMS, OUT_VALUE_STREAMS, Note> + Send,
     const IN_VALUE_STREAMS: usize,
     const IN_CONTROL_STREAMS: usize,
     const OUT_VALUE_STREAMS: usize,
-    Note: Sized + Default + Copy,
+    Note: Sized + Default + Copy + Send,
 >(
     instrument: I,
 ) -> impl InstrumentContainer<Note> {
     InstrumentContainerImpl::new(instrument)
 }
 
-pub trait ControlStreamSource<Note: Sized> {
+pub trait ControlStreamSource<Note: Sized + Send>: Send {
     fn get_control_stream(&self) -> &[NoteCommand<Note>];
     fn fetch_next_stream(&mut self);
-}
-
-pub fn leak<'a, T>(mut value: T) -> &'a mut T {
-    unsafe {
-        let value = &mut value as *mut T;
-        &mut *value
-    }
 }
