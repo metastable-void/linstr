@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicIsize, Ordering};
 
 use linstr::*;
 
@@ -6,12 +6,13 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use rand::Rng;
 
 struct MyControl<'a> {
-    signal: &'a AtomicBool,
+    signal: &'a AtomicIsize,
     stream: [NoteCommand<MidiNote>; 1],
+    last_note: u8,
 }
 
 impl<'a> MyControl<'a> {
-    fn new(signal: &'a AtomicBool) -> Self {
+    fn new(signal: &'a AtomicIsize) -> Self {
         Self {
             signal,
             stream: [NoteCommand {
@@ -19,6 +20,7 @@ impl<'a> MyControl<'a> {
                 velocity: 0,
                 note: 0,
             }],
+            last_note: 69,
         }
     }
 }
@@ -29,27 +31,30 @@ impl ControlStreamSource<MidiNote> for MyControl<'_> {
     }
 
     fn fetch_next_stream(&mut self) {
-        self.stream[0] = if self.signal.load(Ordering::SeqCst) {
-            println!("NoteOn");
+        let value = self.signal.load(Ordering::SeqCst);
+        self.stream[0] = if value >= 0 {
+            println!("NoteOn({})", value);
+
+            self.last_note = value as u8;
 
             NoteCommand {
                 command_type: NoteCommandType::NoteOn,
                 velocity: 255,
-                note: 69,
+                note: self.last_note,
             }
         } else {
             NoteCommand {
                 command_type: NoteCommandType::NoteOff,
                 velocity: 0,
-                note: 69,
+                note: self.last_note,
             }
         };
 
-        self.signal.store(false, Ordering::SeqCst);
+        self.signal.store(-1, Ordering::SeqCst);
     }
 }
 
-static SIGNAL: AtomicBool = AtomicBool::new(false);
+static SIGNAL: AtomicIsize = AtomicIsize::new(-1);
 
 fn main() {
     let host = cpal::default_host();
@@ -133,11 +138,14 @@ fn main() {
 
     stream.play().unwrap();
 
-    let stdin_handle = std::io::stdin();
-    let mut line = String::new();
+    let prob = 0.05;
+
     loop {
-        stdin_handle.read_line(&mut line).unwrap();
-        SIGNAL.store(true, Ordering::SeqCst);
-        line.clear();
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        let rand: f64 = rng.random_range(0.0..1.0);
+        if rand < prob {
+            let note: i32 = rng.random_range(0..128);
+            SIGNAL.store(note as isize, Ordering::SeqCst);
+        }
     }
 }
